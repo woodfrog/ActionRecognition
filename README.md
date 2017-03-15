@@ -23,3 +23,13 @@
 ./utils:
     Possible utils scripts
 
+### Pipeline
+#### Preprocessing
+1. Download dataset: UCF101 http://crcv.ucf.edu/data/UCF101.php  
+2. Extract video to 5 FPS and down sample resolution for each video 
+and discard videos with too few frames
+3. Segment number of frames into equal size blocks(frame number/sequence 
+length L). Randomly select one frame from each block to compose L length 
+video clip
+4. Load videos in batch and do mean substraction for each video
+5. Feed preprocessed videos into CNN and train on RNN with LSTM network
