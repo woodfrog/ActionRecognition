@@ -87,6 +87,10 @@ class PTBInput(object):
     """The input data."""
 
     def __init__(self, config, data, name=None):
+        '''
+          num_steps: the number of timesteps (or unrolled steps)
+
+        '''
         self.batch_size = batch_size = config.batch_size
         self.num_steps = num_steps = config.num_steps
         self.epoch_size = ((len(data) // batch_size) - 1) // num_steps
@@ -143,12 +147,25 @@ class PTBModel(object):
         outputs = []
         state = self._initial_state
         with tf.variable_scope("RNN"):
+            # go through LSTM cells of all timesteps and get the corresponding
             for time_step in range(num_steps):
+                # '''
+                #     1. variable scope here should be:
+                #         outside_scope_name/RNN/...
+                #     2. The reuse_variable here is for reusing the variables of
+                #         LSTM Multiplecells (each cell contains a bunch of basic LSTM
+                #         cells, and each basic cell has it's weights, biases and
+                #         gates variables). The reason behind it is that LSTM Multiple
+                #         cells at different timestep share all their parameters.
+                # '''
                 if time_step > 0: tf.get_variable_scope().reuse_variables()
-                # go through the multiple LSTM cells and get the cell output
                 (cell_output, state) = cell(inputs[:, time_step, :], state)
                 outputs.append(cell_output)
 
+        # '''
+        #     concatenate outputs on the 1st axis and reshape,
+        #     after reshaping each row is of shape (1, hidden_size)
+        # '''
         output = tf.reshape(tf.concat(outputs, 1), [-1, size])
         softmax_w = tf.get_variable(
             "softmax_w", [size, vocab_size], dtype=data_type())
@@ -164,8 +181,8 @@ class PTBModel(object):
         if not is_training:
             return
 
-        self._lr = tf.Variable(0.0, trainable=False)
-        tvars = tf.trainable_variables() # all variables that related to the loss
+        self._lr = tf.Variable(0.0, trainable=False)  # this learning rate will be updated later
+        tvars = tf.trainable_variables()  # all variables that related to the loss
         grads, _ = tf.clip_by_global_norm(tf.gradients(cost, tvars),
                                           config.max_grad_norm)
         optimizer = tf.train.GradientDescentOptimizer(self._lr)
@@ -175,6 +192,7 @@ class PTBModel(object):
 
         self._new_lr = tf.placeholder(
             tf.float32, shape=[], name="new_learning_rate")
+        # this is an operator, be evaluated in self.assign_lr
         self._lr_update = tf.assign(self._lr, self._new_lr)
 
     def assign_lr(self, session, lr_value):
@@ -274,8 +292,9 @@ def run_epoch(session, model, eval_op=None, verbose=False):
     start_time = time.time()
     costs = 0.0
     iters = 0
-    state = session.run(model.initial_state) # set the initial state
+    state = session.run(model.initial_state)  # get the initial state
 
+    # the dict of Tensors and operations to be evaluated
     fetches = {
         "cost": model.cost,
         "final_state": model.final_state,
@@ -283,12 +302,17 @@ def run_epoch(session, model, eval_op=None, verbose=False):
     if eval_op is not None:
         fetches["eval_op"] = eval_op
 
+    # For each epoch, epoch_size batches should be processed
     for step in range(model.input.epoch_size):
         feed_dict = {}
         for i, (c, h) in enumerate(model.initial_state):
             feed_dict[c] = state[i].c
             feed_dict[h] = state[i].h
 
+        # Feed initial state for running each batch
+        # Note: the initial state at the most beginning is zero state,
+        # during the subsequent processing, this part code need to pass the
+        # final state of the last step to the initial state of the next step
         vals = session.run(fetches, feed_dict)
         cost = vals["cost"]
         state = vals["final_state"]
@@ -365,7 +389,8 @@ def main(_):
                 mtest = PTBModel(is_training=False, config=eval_config,
                                  input_=test_input)
 
-        # Todo: read corresponding documents about supervisor
+        # Corresponding official documents about supervisor:
+        # https://www.tensorflow.org/programmers_guide/supervisor
         sv = tf.train.Supervisor(logdir=FLAGS.save_path)
         with sv.managed_session() as session:
             for i in range(config.max_max_epoch):
