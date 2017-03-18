@@ -9,7 +9,7 @@ from keras.layers import Convolution2D, MaxPooling3D, ConvLSTM2D
 from keras.layers.recurrent import LSTM
 import keras.callbacks
 import os, random
-from LRCN_utils import video_generator, get_data_list
+from UCF_utils import video_generator, get_data_list
 
 N_CLASSES = 101
 IMSIZE = (216, 216)
@@ -84,7 +84,5 @@ if __name__ == '__main__':
     print('Train data size: ', len(train_data))
     print('Test data size: ', len(test_data))
 
-    for item in train_data:
-        print(item)
-    # model = load_model()
-    # fit_model(model, train_data, test_data)
+    model = load_model()
+    fit_model(model, train_data, test_data)

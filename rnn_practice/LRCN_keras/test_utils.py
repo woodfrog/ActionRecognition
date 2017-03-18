@@ -1,6 +1,6 @@
 import unittest
 import os
-from LRCN_utils import get_data_list, video_image_generator
+from UCF_utils import get_data_list, video_image_generator
 
 
 class TestGenerator(unittest.TestCase):
