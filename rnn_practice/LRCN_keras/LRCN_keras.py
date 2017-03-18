@@ -9,6 +9,7 @@ from keras.layers import Convolution2D, MaxPooling3D, ConvLSTM2D
 from keras.layers.recurrent import LSTM
 import keras.callbacks
 import os, random
+from LRCN_utils import video_generator, get_data_list
 
 N_CLASSES = 101
 IMSIZE = (216, 216)
@@ -50,33 +51,14 @@ def load_model():
     return model
 
 
-def video_generator(data, batch_size):
-    x_shape = (batch_size, SequenceLength, IMSIZE[0], IMSIZE[1], 3)
-    y_shape = (batch_size, 101)
-    index = 0
-    while True:
-        batch_x = np.ndarray(x_shape)
-        batch_y = np.zeros(y_shape)
-        for i in range(batch_size):
-            index = (index + 1) % len(data)
-            clip_dir, clip_class = data[index]
-            batch_y[i, clip_class - 1] = 1
-            clip_dir = os.path.splitext(clip_dir)[0] + '.npy'
-            while not os.path.exists(clip_dir):
-                index = (index + 1) % len(data)
-                clip_dir, class_idx = data[index]
-            clip_data = np.load(clip_dir)
-            batch_x[i] = clip_data
-        yield batch_x, batch_y
-
-
 def fit_model(model, train_data, test_data):
     try:
         if os.path.exists('LRCN_keras.h5'):
             model.load_weights('LRCN_keras.h5')
             print('Load weights')
-        train_generator = video_generator(train_data, BatchSize)
-        test_generator = video_generator(test_data, BatchSize)
+        train_generator = video_generator(train_data, BatchSize, seq_len=SequenceLength, img_size=IMSIZE,
+                                          num_classes=101)
+        test_generator = video_generator(test_data, BatchSize, seq_len=SequenceLength, img_size=IMSIZE, num_classes=101)
         print('Start fitting model')
         weigts_dir = './weights'
         model.fit_generator(
@@ -93,51 +75,8 @@ def fit_model(model, train_data, test_data):
         print('Training time:')
 
 
-def get_data_list(list_dir, video_dir):
-    train_dir = os.path.join(video_dir, 'train')
-    test_dir = os.path.join(video_dir, 'test')
-    testlisttxt = 'testlist01.txt'
-    trainlisttxt = 'trainlist01.txt'
-
-    testlist = []
-    txt_path = os.path.join(list_dir, testlisttxt)
-    with open(txt_path) as fo:
-        for line in fo:
-            testlist.append(line.rstrip())
-
-    trainlist = []
-    txt_path = os.path.join(list_dir, trainlisttxt)
-    with open(txt_path) as fo:
-        for line in fo:
-            trainlist.append(line[:line.rfind(' ')])
-
-    class_index = dict()
-    class_dir = os.path.join(list_dir, 'classInd.txt')
-    with open(class_dir) as fo:
-        for line in fo:
-            class_number, class_name = line.split()
-            class_number = int(class_number)
-            class_index[class_name] = class_number
-
-    train_data = []
-    for i, clip in enumerate(trainlist):
-        clip_class = os.path.dirname(clip)
-        dst_dir = os.path.join(train_dir, clip)
-        train_data.append((dst_dir, class_index[clip_class]))
-    random.shuffle(train_data)
-
-    test_data = []
-    for i, clip in enumerate(testlist):
-        clip_class = os.path.dirname(clip)
-        dst_dir = os.path.join(test_dir, clip)
-        test_data.append((dst_dir, class_index[clip_class]))
-    random.shuffle(train_data)
-
-    return train_data, test_data, class_index
-
-
 if __name__ == '__main__':
-    data_dir = 'data_dir'
+    data_dir = '/Users/cjc/cv/ActionRecognition_rnn/data/data'
     list_dir = os.path.join(data_dir, 'ucfTrainTestlist')
     video_dir = os.path.join(data_dir, 'UCF-Preprocessed')
 
@@ -145,6 +84,7 @@ if __name__ == '__main__':
     print('Train data size: ', len(train_data))
     print('Test data size: ', len(test_data))
 
-    model = load_model()
-    fit_model(model, train_data, test_data)
-
+    for item in train_data:
+        print(item)
+    # model = load_model()
+    # fit_model(model, train_data, test_data)
