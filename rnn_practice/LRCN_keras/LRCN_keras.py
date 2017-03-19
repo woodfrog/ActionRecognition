@@ -1,5 +1,8 @@
 '''
-Implementing simple LRCN structure in paper https://arxiv.org/pdf/1411.4389v3.pdf
+Implementing LRCN structure
+References:
+    http://cs231n.stanford.edu/reports2016/221_Report.pdf
+    https://arxiv.org/pdf/1411.4389v3.pdf
 '''
 
 import numpy as np
@@ -23,9 +26,8 @@ def load_model():
     model = Sequential()
     model.add(ConvLSTM2D(32, kernel_size=(7, 7), padding='valid', return_sequences=True, input_shape=in_shape))
     model.add(Activation('relu'))
-    model.add(MaxPooling3D(pool_size=(1, 2, 2)))  # channel last
+    model.add(MaxPooling3D(pool_size=(1, 2, 2)))
     model.add(ConvLSTM2D(64, kernel_size=(5, 5), padding='valid', return_sequences=True))
-    model.add(Activation('relu'))
     model.add(MaxPooling3D(pool_size=(1, 2, 2)))
     model.add(ConvLSTM2D(96, kernel_size=(3, 3), padding='valid', return_sequences=True))
     model.add(Activation('relu'))
@@ -60,15 +62,15 @@ def fit_model(model, train_data, test_data):
                                           num_classes=101)
         test_generator = video_generator(test_data, BatchSize, seq_len=SequenceLength, img_size=IMSIZE, num_classes=101)
         print('Start fitting model')
-        weigts_dir = './weights'
+        checkpointer = keras.callbacks.ModelCheckpoint('LRCN_weights.h5', save_weights_only=True)
         model.fit_generator(
             train_generator,
-            samples_per_epoch=9000,
-            nb_epoch=2000,
+            steps_per_epoch=4500,
+            epochs=20,
             validation_data=test_generator,
-            nb_val_samples=300,
+            validation_steps=300,
             verbose=2,
-            callbacks=keras.callbacks.ModelCheckpoint('LRCN_weights.h5', save_weights_only=True)
+            callbacks=[checkpointer]
         )
         model.save_weights('LRCN_keras.h5')
     except KeyboardInterrupt:
@@ -76,7 +78,7 @@ def fit_model(model, train_data, test_data):
 
 
 if __name__ == '__main__':
-    data_dir = '/Users/cjc/cv/ActionRecognition_rnn/data/data'
+    data_dir = '/home/changan/ActionRocognition_rnn/data'
     list_dir = os.path.join(data_dir, 'ucfTrainTestlist')
     video_dir = os.path.join(data_dir, 'UCF-Preprocessed')
 

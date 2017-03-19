@@ -1,4 +1,4 @@
-import inception_v3 as inception
+from CNN import CNN
 import os
 import numpy as np
 from collections import OrderedDict
@@ -13,6 +13,13 @@ def model_processing(model, src_dir, dest_dir, timeseq_len):
     """
     train_dir = os.path.join(src_dir, 'train')
     test_dir = os.path.join(src_dir, 'test')
+
+    # create dest directory
+    if os.path.exists(dest_dir):
+        print(dest_dir, 'already exists')
+    else:
+        os.mkdir(dest_dir)
+        print(dest_dir, 'created')
 
     # create directory for training data
     dest_train_dir = os.path.join(dest_dir, 'train')
@@ -45,16 +52,17 @@ def model_processing(model, src_dir, dest_dir, timeseq_len):
                 file_dir = os.path.join(class_dir, filename)
                 clip_data = np.load(file_dir)
                 processed_data = model.predict(clip_data, batch_size=timeseq_len)
+                print(processed_data.shape)
                 dest_file_dir = os.path.join(dest_class_dir, filename)
                 np.save(dest_file_dir, processed_data)
             print('No.{} class {} finished, data saved in {}'.format(index, class_name, dest_class_dir))
 
 
 if __name__ == '__main__':
-    model = inception.InceptionV3(weights='imagenet', include_top=False)
+    model = CNN(include_top=False)
     print('Loaded Inception model without top layers')
     print(model.summary())
     src_dir = '/home/changan/ActionRocognition_rnn/data/UCF-Preprocessed'
-    dest_dir = '/home/changan/ActionRocognition_rnn/data/Inception_Processed'
+    dest_dir = '/home/changan/ActionRocognition_rnn/data/CNN_Processed'
     TIMESEQ_LEN = 10
     model_processing(model, src_dir, dest_dir, TIMESEQ_LEN)

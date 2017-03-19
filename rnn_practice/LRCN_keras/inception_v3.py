@@ -149,7 +149,7 @@ def InceptionV3(include_top=True,
     # Determine proper input shape
     input_shape = _obtain_input_shape(
         input_shape,
-        default_size=299,
+        default_size=216,
         min_size=139,
         data_format=K.image_data_format(),
         include_top=include_top)

@@ -25,7 +25,7 @@ def combine_list_txt(list_dir):
     return trainlist, testlist
 
 # down sample image resolution to 216*216, and make sequence length 10
-def process_clip(src_dir, dst_dir, mean):
+def process_clip(src_dir, dst_dir, mean=None):
     all_frames = []
     cap = cv2.VideoCapture(src_dir)
     while cap.isOpened():
@@ -45,8 +45,10 @@ def process_clip(src_dir, dst_dir, mean):
     for i in range(SequenceLength):
         frame = all_frames[index]
         frame = scipy.misc.imresize(frame, IMSIZE)
-        frame = frame.astype(dtype='int16')
-        frame -= mean
+        frame = frame.astype(dtype='float16')
+        if mean is not None:
+            frame -= mean
+        frame /= 255
         frame_sequence.append(frame)
         index += step_size
     frame_sequence = np.stack(frame_sequence, axis=0)
@@ -61,7 +63,7 @@ def process_clip(src_dir, dst_dir, mean):
 
     cap.release()
 
-def Preprocessing(list_dir, UCF_dir, dest_dir):
+def Preprocessing(list_dir, UCF_dir, dest_dir, mean_subtraction=True):
     if os.path.exists(dest_dir):
         print('Destination directory already exists')
         return
@@ -71,8 +73,9 @@ def Preprocessing(list_dir, UCF_dir, dest_dir):
     test_dir = os.path.join(dest_dir, 'test')
     os.mkdir(train_dir)
     os.mkdir(test_dir)
-    mean = calc_mean(UCF_dir).astype(dtype='int16')
-    np.save(os.path.join(dest_dir, 'mean.npy'), mean)
+    if mean_subtraction:
+        mean = calc_mean(UCF_dir).astype(dtype='float16')
+        np.save(os.path.join(dest_dir, 'mean.npy'), mean)
 
     print('Processing train data')
     for clip in trainlist:
@@ -80,11 +83,14 @@ def Preprocessing(list_dir, UCF_dir, dest_dir):
         clip_category = os.path.dirname(clip)
         category_dir = os.path.join(train_dir, clip_category)
         src_dir = os.path.join(UCF_dir, clip)
-        # print(src_dir)
+        print(src_dir)
         dst_dir = os.path.join(category_dir, clip_name)
         if not os.path.exists(category_dir):
             os.mkdir(category_dir)
-        process_clip(src_dir, dst_dir, mean)
+        if mean_subtraction:
+            process_clip(src_dir, dst_dir, mean)
+        else:
+            process_clip(src_dir, dst_dir)
 
     print('Processing test data')
     for clip in testlist:
@@ -92,11 +98,14 @@ def Preprocessing(list_dir, UCF_dir, dest_dir):
         clip_category = os.path.dirname(clip)
         category_dir = os.path.join(test_dir, clip_category)
         src_dir = os.path.join(UCF_dir, clip)
-        # print(src_dir)
+        print(src_dir)
         dst_dir = os.path.join(category_dir, clip_name)
         if not os.path.exists(category_dir):
             os.mkdir(category_dir)
-        process_clip(src_dir, dst_dir, mean)
+        if mean_subtraction:
+            process_clip(src_dir, dst_dir, mean)
+        else:
+            process_clip(src_dir, dst_dir)
 
 
 def calc_mean(UCF_dir):
@@ -126,7 +135,6 @@ if __name__ == '__main__':
     data_dir = '/home/changan/ActionRocognition_rnn/data'
     list_dir = os.path.join(data_dir, 'ucfTrainTestlist')
     UCF_dir = os.path.join(data_dir, 'UCF-101')
-    dest_dir = os.path.join(data_dir, 'UCF-Preprocessed1')
+    dest_dir = os.path.join(data_dir, 'UCF-Preprocessed')
 
-    # calc_mean(UCF_dir)
-    Preprocessing(list_dir, UCF_dir, dest_dir)
+    Preprocessing(list_dir, UCF_dir, dest_dir, mean_subtraction=False)
