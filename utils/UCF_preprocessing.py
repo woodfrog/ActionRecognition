@@ -2,9 +2,6 @@ import numpy as np
 import scipy.misc
 import os, cv2, random
 
-SequenceLength = 10
-IMSIZE = (216, 216, 3)
-
 
 def combine_list_txt(list_dir):
     testlisttxt = 'testlist01.txt'
@@ -25,7 +22,7 @@ def combine_list_txt(list_dir):
     return trainlist, testlist
 
 # down sample image resolution to 216*216, and make sequence length 10
-def process_clip(src_dir, dst_dir, mean=None):
+def process_clip(src_dir, dst_dir, seq_len, img_size, mean=None):
     all_frames = []
     cap = cv2.VideoCapture(src_dir)
     while cap.isOpened():
@@ -35,35 +32,34 @@ def process_clip(src_dir, dst_dir, mean=None):
         # append frame that is not all zeros
         if frame.any():
             all_frames.append(frame)
-
-    clip_length = len(all_frames)
-    if clip_length <= 20:
-        print(src_dir, ' has no enough frames')
-    step_size = int(clip_length / (SequenceLength + 1))
-    frame_sequence = []
-    index = random.randrange(step_size)  # generate random starting index
-    for i in range(SequenceLength):
-        frame = all_frames[index]
-        frame = scipy.misc.imresize(frame, IMSIZE)
-        frame = frame.astype(dtype='float16')
-        if mean is not None:
-            frame -= mean
-        frame /= 255
-        frame_sequence.append(frame)
-        index += step_size
-    frame_sequence = np.stack(frame_sequence, axis=0)
-    dst_dir = os.path.splitext(dst_dir)[0]+'.npy'
-    np.save(dst_dir, frame_sequence)
-
-    # fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    # out = cv2.VideoWriter(dst_dir, fourcc, 5.0, IMSIZE)
-    # for frame in frame_sequence:
-    #     out.write(frame)
-    # out.release()
+    # save all frames
+    if seq_len is None:
+        all_frames = np.stack(all_frames, axis=0)
+        dst_dir = os.path.splitext(dst_dir)[0] + '.npy'
+        np.save(dst_dir, all_frames)
+    else:
+        clip_length = len(all_frames)
+        if clip_length <= 20:
+            print(src_dir, ' has no enough frames')
+        step_size = int(clip_length / (seq_len + 1))
+        frame_sequence = []
+        index = random.randrange(step_size)  # generate random starting index
+        for i in range(seq_len):
+            frame = all_frames[index]
+            frame = scipy.misc.imresize(frame, img_size)
+            frame = frame.astype(dtype='float16')
+            if mean is not None:
+                frame -= mean
+            frame /= 255
+            frame_sequence.append(frame)
+            index += step_size
+        frame_sequence = np.stack(frame_sequence, axis=0)
+        dst_dir = os.path.splitext(dst_dir)[0]+'.npy'
+        np.save(dst_dir, frame_sequence)
 
     cap.release()
 
-def Preprocessing(list_dir, UCF_dir, dest_dir, mean_subtraction=True):
+def Preprocessing(list_dir, UCF_dir, dest_dir, seq_len, img_size, mean_subtraction=True):
     if os.path.exists(dest_dir):
         print('Destination directory already exists')
         return
@@ -74,7 +70,7 @@ def Preprocessing(list_dir, UCF_dir, dest_dir, mean_subtraction=True):
     os.mkdir(train_dir)
     os.mkdir(test_dir)
     if mean_subtraction:
-        mean = calc_mean(UCF_dir).astype(dtype='float16')
+        mean = calc_mean(UCF_dir, img_size).astype(dtype='float16')
         np.save(os.path.join(dest_dir, 'mean.npy'), mean)
 
     print('Processing train data')
@@ -88,9 +84,9 @@ def Preprocessing(list_dir, UCF_dir, dest_dir, mean_subtraction=True):
         if not os.path.exists(category_dir):
             os.mkdir(category_dir)
         if mean_subtraction:
-            process_clip(src_dir, dst_dir, mean)
+            process_clip(src_dir, dst_dir, mean=mean, seq_len=seq_len, img_size=img_size)
         else:
-            process_clip(src_dir, dst_dir)
+            process_clip(src_dir, dst_dir, seq_len=seq_len, img_size=img_size)
 
     print('Processing test data')
     for clip in testlist:
@@ -103,12 +99,12 @@ def Preprocessing(list_dir, UCF_dir, dest_dir, mean_subtraction=True):
         if not os.path.exists(category_dir):
             os.mkdir(category_dir)
         if mean_subtraction:
-            process_clip(src_dir, dst_dir, mean)
+            process_clip(src_dir, dst_dir, mean=mean, seq_len=seq_len, img_size=img_size)
         else:
-            process_clip(src_dir, dst_dir)
+            process_clip(src_dir, dst_dir, seq_len=seq_len, img_size=img_size)
 
 
-def calc_mean(UCF_dir):
+def calc_mean(UCF_dir, img_size):
     frames = []
     print('Calculating RGB mean ...')
     for dirpath, dirnames, filenames in os.walk(UCF_dir):
@@ -126,15 +122,27 @@ def calc_mean(UCF_dir):
                 cap.release()
     frames = np.stack(frames)
     mean = frames.mean(axis=0, dtype='int64')
-    mean = scipy.misc.imresize(mean, IMSIZE)
+    mean = scipy.misc.imresize(mean, img_size)
     print('RGB mean is calculated over', len(frames), 'video frames')
     return mean
 
 
 if __name__ == '__main__':
+    '''
+        extract frames from videos as npy files
+    '''
+    sequence_length = 10
+    image_size = (216, 216, 3)
+
     data_dir = '/home/changan/ActionRocognition_rnn/data'
     list_dir = os.path.join(data_dir, 'ucfTrainTestlist')
     UCF_dir = os.path.join(data_dir, 'UCF-101')
-    dest_dir = os.path.join(data_dir, 'UCF-Preprocessed')
+    seq_frames_dir = os.path.join(data_dir, 'UCF-Preprocessed')
+    all_frames_dir = os.path.join(data_dir, 'UCF_all_frames')
 
-    Preprocessing(list_dir, UCF_dir, dest_dir, mean_subtraction=False)
+    # extract all frames from videos to train the network
+    # Preprocessing(list_dir, UCF_dir, all_frames_dir, seq_len=None, img_size=image_size,
+    #               mean_subtraction=True)
+
+    # only extract 10 frames from each video to train the network
+    Preprocessing(list_dir, UCF_dir, seq_frames_dir, seq_len=sequence_length, img_size=image_size, mean_subtraction=True)

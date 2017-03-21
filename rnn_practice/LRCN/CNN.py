@@ -13,40 +13,46 @@ from keras.layers.normalization import BatchNormalization
 from keras import regularizers
 import keras.callbacks
 import os, random
+from UCF_utils import video_image_generator
+from resnet50 import ResNet50
+from keras.optimizers import SGD
+from inception_v3 import InceptionV3
 
 N_CLASSES = 101
-IMSIZE = (216, 216)
+IMSIZE = (216, 216, 3)
 SequenceLength = 10
 BatchSize = 30
 
 
 def CNN(include_top=True):
     # use simple CNN structure
-    in_shape = (IMSIZE[0], IMSIZE[1], 3)
     model = Sequential()
-    model.add(Convolution2D(64, kernel_size=(7, 7), input_shape=in_shape, data_format='channels_last'))
+    model.add(Convolution2D(96, kernel_size=(7, 7), strides=(2, 2), input_shape=IMSIZE, data_format='channels_last'))
     print('Output shape:', model.output_shape)
     model.add(BatchNormalization(axis=3))
     model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=(2, 2), strides=2))
 
-    model.add(Convolution2D(96, kernel_size=(5, 5), data_format='channels_last'))
+    model.add(Convolution2D(256, kernel_size=(5, 5), strides=(2, 2), data_format='channels_last'))
     model.add(BatchNormalization(axis=3))
     model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=(2, 2), strides=2))
     print('Output shape:', model.output_shape)
 
-    model.add(Convolution2D(128, kernel_size=(3, 3), data_format='channels_last'))
+    model.add(Convolution2D(512, kernel_size=(3, 3), data_format='channels_last'))
     model.add(Activation('relu'))
-    model.add(Convolution2D(128, kernel_size=(3, 3), data_format='channels_last'))
+    model.add(Convolution2D(512, kernel_size=(3, 3), data_format='channels_last'))
     model.add(Activation('relu'))
     print('Output shape:', model.output_shape)
-    model.add(Convolution2D(196, kernel_size=(3, 3), data_format='channels_last'))
+    model.add(Convolution2D(512, kernel_size=(3, 3), data_format='channels_last'))
     model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=(2, 2), strides=2))
-    model.add(Dense(320))
+    model.add(Dense(4096))
     model.add(Activation('relu'))
-    model.add(Dropout(0.5))
+    model.add(Dropout(0.9))
+    model.add(Dense(2048))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.9))
     model.add(Flatten())
     print('Output shape:', model.output_shape)
 
@@ -67,33 +73,17 @@ def CNN(include_top=True):
     return model
 
 
-def video_generator(data, batch_size):
-    x_shape = (batch_size, IMSIZE[0], IMSIZE[1], 3)
-    y_shape = (batch_size, 101)
-    index = 0
-    while True:
-        batch_x = np.ndarray(x_shape)
-        batch_y = np.zeros(y_shape)
-        for i in range(batch_size):
-            index = (index + 1) % len(data)
-            clip_dir, clip_class = data[index]
-            batch_y[i, clip_class - 1] = 1
-            clip_dir = os.path.splitext(clip_dir)[0] + '.npy'
-            while not os.path.exists(clip_dir):
-                index = (index + 1) % len(data)
-                clip_dir, class_idx = data[index]
-            clip_data = np.load(clip_dir)
-            batch_x[i] = clip_data[random.randrange(SequenceLength)]
-        yield batch_x, batch_y
-
-
 def fit_model(model, train_data, test_data):
-    weights_dir = 'CNN_weights.h5'
+    weights_dir = 'Inception_weights.h5'
+    if os.path.exists(weights_dir):
+        model.load_weights(weights_dir)
     try:
-        train_generator = video_generator(train_data, BatchSize)
-        test_generator = video_generator(test_data, BatchSize)
+        train_generator = video_image_generator(train_data, BatchSize, seq_len=SequenceLength, img_size=IMSIZE,
+                                                num_classes=101)
+        test_generator = video_image_generator(test_data, BatchSize, seq_len=SequenceLength, img_size=IMSIZE,
+                                               num_classes=101)
         print('Start fitting model')
-        checkpointer = keras.callbacks.ModelCheckpoint(weights_dir, save_weights_only=True)
+        checkpointer = keras.callbacks.ModelCheckpoint(weights_dir, save_best_only=True, save_weights_only=True)
         model.fit_generator(
             train_generator,
             steps_per_epoch=300,
@@ -151,6 +141,23 @@ def get_data_list(list_dir, video_dir):
     return train_data, test_data, class_index
 
 
+def load_model():
+    base_model = InceptionV3(include_top=False, weights='imagenet', input_shape=IMSIZE)
+    for layer in base_model.layers:
+        layer.trainable = False
+
+    x = base_model.output
+    x = Flatten()(x)
+    predictions = Dense(N_CLASSES, activation='softmax')(x)
+
+    model = Model(inputs=base_model.input, outputs=predictions)
+    print(model.summary())
+
+    sgd = SGD(lr=0.001, decay=1e-6, momentum=0.5)
+    model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
+
+    return model
+
 if __name__ == '__main__':
     data_dir = '/home/changan/ActionRocognition_rnn/data'
     list_dir = os.path.join(data_dir, 'ucfTrainTestlist')
@@ -160,6 +167,6 @@ if __name__ == '__main__':
     print('Train data size: ', len(train_data))
     print('Test data size: ', len(test_data))
 
-    model = CNN()
+    model = load_model()
     fit_model(model, train_data, test_data)
 

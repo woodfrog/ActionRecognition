@@ -60,7 +60,7 @@ def fit_model(model, train_data, test_data):
 
 
 if __name__ == '__main__':
-    data_dir = '/home/changan/ActionRocognition_rnn/data'
+    data_dir = '/home/changan/ActionRecognition_rnn/data'
     list_dir = os.path.join(data_dir, 'ucfTrainTestlist')
     video_dir = os.path.join(data_dir, 'CNN_Processed')
 

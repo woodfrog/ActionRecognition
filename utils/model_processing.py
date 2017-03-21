@@ -13,6 +13,13 @@ def model_processing(model, src_dir, dest_dir, timeseq_len):
     train_dir = os.path.join(src_dir, 'train')
     test_dir = os.path.join(src_dir, 'test')
 
+    # create dest directory
+    if os.path.exists(dest_dir):
+        print(dest_dir, 'already exists')
+    else:
+        os.mkdir(dest_dir)
+        print(dest_dir, 'created')
+
     # create directory for training data
     dest_train_dir = os.path.join(dest_dir, 'train')
     if os.path.exists(dest_train_dir):
