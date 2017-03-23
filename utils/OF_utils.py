@@ -6,7 +6,6 @@ from collections import OrderedDict
 
 
 def optical_flow_prep(src_dir, dest_dir):
-    # todo: generate training and testing data directly, and then use pickle to save them? ndarray costs too much storage
     train_dir = os.path.join(src_dir, 'train')
     test_dir = os.path.join(src_dir, 'test')
 
@@ -47,7 +46,8 @@ def optical_flow_prep(src_dir, dest_dir):
             for filename in os.listdir(class_dir):  # process videos one by one
                 file_dir = os.path.join(class_dir, filename)
                 frames = np.load(file_dir)
-                processed_data = stack_optical_flow(frames)
+                # note: store the final processed data with type of float16 to save storage
+                processed_data = stack_optical_flow(frames).astype(np.float16)
                 dest_file_dir = os.path.join(dest_class_dir, filename)
                 np.save(dest_file_dir, processed_data)
             print('No.{} class {} finished, data saved in {}'.format(index, class_name, dest_class_dir))
