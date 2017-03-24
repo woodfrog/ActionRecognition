@@ -5,7 +5,7 @@ import warnings
 from collections import OrderedDict
 
 
-def optical_flow_prep(src_dir, dest_dir):
+def optical_flow_prep(src_dir, dest_dir, mean_sub=True):
     train_dir = os.path.join(src_dir, 'train')
     test_dir = os.path.join(src_dir, 'test')
 
@@ -47,7 +47,7 @@ def optical_flow_prep(src_dir, dest_dir):
                 file_dir = os.path.join(class_dir, filename)
                 frames = np.load(file_dir)
                 # note: store the final processed data with type of float16 to save storage
-                processed_data = stack_optical_flow(frames).astype(np.float16)
+                processed_data = stack_optical_flow(frames, mean_sub).astype(np.float16)
                 dest_file_dir = os.path.join(dest_class_dir, filename)
                 np.save(dest_file_dir, processed_data)
             print('No.{} class {} finished, data saved in {}'.format(index, class_name, dest_class_dir))
@@ -71,9 +71,13 @@ def stack_optical_flow(frames, mean_sub=False):
         flows[:, :, 2 * i:2 * i + 2] = flow
 
     if mean_sub:
-        mean = np.mean(flows, axis=2)
+        flows_x = flows[:, :, 0:2 * (num_sequences - 1):2]
+        flows_y = flows[:, :, 1:2 * (num_sequences - 1):2]
+        mean_x = np.mean(flows_x, axis=2)
+        mean_y = np.mean(flows_y, axis=2)
         for i in range(2 * (num_sequences - 1)):
-            flows[:, :, i] = flows[:, :, i] - mean
+            flows[:, :, i] = flows[:, :, i] - mean_x if i % 2 == 0 else flows[:, :, i] - mean_y
+
 
     return flows
 
@@ -85,6 +89,6 @@ def _calc_optical_flow(prev, next):
 
 
 if __name__ == '__main__':
-    src_dir = '/Users/cjc/cv/ActionRecognition/data/data/UCF-Preprocessed'
-    dest_dir = '/Users/cjc/cv/ActionRecognition/data/data/OF_data'
-    optical_flow_prep(src_dir, dest_dir)
+    src_dir = '/home/changan/ActionRecognition/data/UCF-Preprocessed2'
+    dest_dir = '/home/changan/ActionRecognition/data/OF_data'
+    optical_flow_prep(src_dir, dest_dir, mean_sub=True)

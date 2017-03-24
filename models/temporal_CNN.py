@@ -7,9 +7,10 @@ from keras.layers import Activation
 from keras.layers import Dropout
 from keras.layers import Flatten
 from keras.models import Model
+import os
 
 
-def temporal_CNN(input_shape, classes):
+def temporal_CNN(input_shape, classes, weights_dir, include_top=True):
     '''
     The CNN for optical flow input.
     Since optical flow is not a common image, we cannot finetune pre-trained ResNet (The weights trained on imagenet is
@@ -44,15 +45,21 @@ def temporal_CNN(input_shape, classes):
     x = MaxPooling2D(pool_size=(2, 2))(x)
 
     x = Flatten()(x)
-    x = Dense(2048, activation='relu', name='fc6')(x)
+    x = Dense(4096, activation='relu', name='fc6')(x)
     x = Dropout(0.5)(x)
 
-    x = Dense(1024, activation='relu', name='fc7')(x)
+    x = Dense(2048, activation='relu', name='fc7')(x)
     x = Dropout(0.5)(x)
 
-    x = Dense(classes, activation='softmax', name='fc101')(x)
+    if include_top:
+        x = Dense(classes, activation='softmax', name='fc101')(x)
 
     model = Model(inputs=optical_flow_input, outputs=x, name='temporal_CNN')
+    model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
+    print(model.summary())
+
+    if os.path.exists(weights_dir):
+        model.load_weights(weights_dir, by_name=True)
 
     return model
 
@@ -61,4 +68,4 @@ if __name__ == '__main__':
     input_shape = (216, 216, 18)
     N_CLASSES = 101
     model = temporal_CNN(input_shape, N_CLASSES)
-    print(model.summary())
+

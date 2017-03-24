@@ -55,9 +55,12 @@ This indicates that RNN is not so useful in action recognition, since it only ke
 information in its state but does not explicit operations on coming sequence. In other words, action recognition
 is not a task that depends on long term dependence so much, but instead, it needs more explicit information like optical
 flow
+9. Try ConvNet using optical flow as input, and get val acc of 0.21
 
 
 
 Methods to try: 
-1. Use two stream method, add input of optical flow.
-2. Data augumentation, when sampling, generating more videos
+1. Data augumentation, random sampling, generate different preprocessed data
+2. Using continuous frames as input 
+3. Multi-task learning: combine different databases using two different softmax and shared weights
+4. fliiping and jittering, loss decreasing stops soon?

@@ -4,19 +4,16 @@ import keras.callbacks
 from models import RNN
 
 N_CLASSES = 101
-IMSIZE = (216, 216, 3)
-SequenceLength = 10
 BatchSize = 30
-CNN_output = 1024
 
 
-def fit_model(model, train_data, test_data, weights_dir):
+def fit_model(model, train_data, test_data, weights_dir, input_shape):
     try:
         if os.path.exists(weights_dir):
             model.load_weights(weights_dir)
             print('Load weights')
-        train_generator = sequence_generator(train_data, BatchSize, SequenceLength, CNN_output, N_CLASSES)
-        test_generator = sequence_generator(test_data, BatchSize, SequenceLength, CNN_output, N_CLASSES)
+        train_generator = sequence_generator(train_data, BatchSize, input_shape, N_CLASSES)
+        test_generator = sequence_generator(test_data, BatchSize, input_shape, N_CLASSES)
         print('Start fitting model')
         checkpointer = keras.callbacks.ModelCheckpoint(weights_dir, save_best_only=True, save_weights_only=True)
         model.fit_generator(
@@ -42,6 +39,8 @@ if __name__ == '__main__':
     print('Train data size: ', len(train_data))
     print('Test data size: ', len(test_data))
 
+    CNN_output = 1024
+    input_shape = (10, CNN_output)
     rnn_weights_dir = os.path.join(weights_dir, 'rnn.h5')
     RNN_model = RNN.RNN(rnn_weights_dir, CNN_output)
-    fit_model(RNN_model, train_data, test_data, rnn_weights_dir)
+    fit_model(RNN_model, train_data, test_data, rnn_weights_dir, input_shape)

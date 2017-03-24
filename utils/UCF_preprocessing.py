@@ -21,8 +21,9 @@ def combine_list_txt(list_dir):
 
     return trainlist, testlist
 
+
 # down sample image resolution to 216*216, and make sequence length 10
-def process_clip(src_dir, dst_dir, seq_len, img_size, mean=None):
+def process_clip(src_dir, dst_dir, seq_len, img_size, mean=None, normalization=True):
     all_frames = []
     cap = cv2.VideoCapture(src_dir)
     while cap.isOpened():
@@ -50,7 +51,8 @@ def process_clip(src_dir, dst_dir, seq_len, img_size, mean=None):
             frame = frame.astype(dtype='float16')
             if mean is not None:
                 frame -= mean
-            frame /= 255
+            if normalization:
+                frame /= 255
             frame_sequence.append(frame)
             index += step_size
         frame_sequence = np.stack(frame_sequence, axis=0)
@@ -59,7 +61,8 @@ def process_clip(src_dir, dst_dir, seq_len, img_size, mean=None):
 
     cap.release()
 
-def Preprocessing(list_dir, UCF_dir, dest_dir, seq_len, img_size, mean_subtraction=True):
+
+def preprocessing(list_dir, UCF_dir, dest_dir, seq_len, img_size, normalization=True, mean_subtraction=True):
     if os.path.exists(dest_dir):
         print('Destination directory already exists')
         return
@@ -84,9 +87,9 @@ def Preprocessing(list_dir, UCF_dir, dest_dir, seq_len, img_size, mean_subtracti
         if not os.path.exists(category_dir):
             os.mkdir(category_dir)
         if mean_subtraction:
-            process_clip(src_dir, dst_dir, mean=mean, seq_len=seq_len, img_size=img_size)
+            process_clip(src_dir, dst_dir, seq_len=seq_len, img_size=img_size, mean=mean, normalization=normalization)
         else:
-            process_clip(src_dir, dst_dir, seq_len=seq_len, img_size=img_size)
+            process_clip(src_dir, dst_dir, seq_len=seq_len, img_size=img_size, normalization=normalization)
 
     print('Processing test data')
     for clip in testlist:
@@ -99,9 +102,9 @@ def Preprocessing(list_dir, UCF_dir, dest_dir, seq_len, img_size, mean_subtracti
         if not os.path.exists(category_dir):
             os.mkdir(category_dir)
         if mean_subtraction:
-            process_clip(src_dir, dst_dir, mean=mean, seq_len=seq_len, img_size=img_size)
+            process_clip(src_dir, dst_dir, seq_len=seq_len, img_size=img_size, mean=mean, normalization=normalization)
         else:
-            process_clip(src_dir, dst_dir, seq_len=seq_len, img_size=img_size)
+            process_clip(src_dir, dst_dir, seq_len=seq_len, img_size=img_size, normalization=normalization)
 
 
 def calc_mean(UCF_dir, img_size):
@@ -134,10 +137,10 @@ if __name__ == '__main__':
     sequence_length = 10
     image_size = (216, 216, 3)
 
-    data_dir = '/home/changan/ActionRocognition_rnn/data'
+    data_dir = '/home/changan/ActionRecognition/data'
     list_dir = os.path.join(data_dir, 'ucfTrainTestlist')
     UCF_dir = os.path.join(data_dir, 'UCF-101')
-    seq_frames_dir = os.path.join(data_dir, 'UCF-Preprocessed')
+    seq_frames_dir = os.path.join(data_dir, 'UCF-Preprocessed2')
     all_frames_dir = os.path.join(data_dir, 'UCF_all_frames')
 
     # extract all frames from videos to train the network
@@ -145,4 +148,7 @@ if __name__ == '__main__':
     #               mean_subtraction=True)
 
     # only extract 10 frames from each video to train the network
-    Preprocessing(list_dir, UCF_dir, seq_frames_dir, seq_len=sequence_length, img_size=image_size, mean_subtraction=True)
+    # Preprocessing(list_dir, UCF_dir, seq_frames_dir, sequence_length, image_size)
+
+    # extract 10 frames and save it as vidoe clips
+    preprocessing(list_dir, UCF_dir, seq_frames_dir, sequence_length, image_size, normalization=False, mean_subtraction=False)
