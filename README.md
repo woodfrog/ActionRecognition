@@ -55,7 +55,8 @@ This indicates that RNN is not so useful in action recognition, since it only ke
 information in its state but does not explicit operations on coming sequence. In other words, action recognition
 is not a task that depends on long term dependence so much, but instead, it needs more explicit information like optical
 flow
-9. Try ConvNet using optical flow as input, and get val acc of 0.21
+9. Try ConvNet using optical flow as input, and get val acc of 0.21. Using continuous sequential data and higher drop rate
+(0.5 to 0.9)
 
 
 

@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.misc
 import os, cv2, random
+import shutil
 
 
 def combine_list_txt(list_dir):
@@ -22,8 +23,26 @@ def combine_list_txt(list_dir):
     return trainlist, testlist
 
 
+def process_frame(frame, img_size, x, y, mean=None, normalization=True, flip=True, random_crop=True):
+    if not random_crop:
+        frame = scipy.misc.imresize(frame, img_size)
+    else:
+        frame = frame[x:x+img_size[0], y:y+img_size[1], :]
+    # flip horizontally
+    if flip:
+        frame = frame[:, ::-1, :]
+    frame = frame.astype(dtype='float16')
+    if mean is not None:
+        frame -= mean
+    if normalization:
+        frame /= 255
+
+    return frame
+
+
 # down sample image resolution to 216*216, and make sequence length 10
-def process_clip(src_dir, dst_dir, seq_len, img_size, mean=None, normalization=True):
+def process_clip(src_dir, dst_dir, seq_len, img_size, mean=None, normalization=True,
+                 horizontal_flip=True, random_crop=True, consistent=True, continuous_seq=False):
     all_frames = []
     cap = cv2.VideoCapture(src_dir)
     while cap.isOpened():
@@ -44,17 +63,36 @@ def process_clip(src_dir, dst_dir, seq_len, img_size, mean=None, normalization=T
             print(src_dir, ' has no enough frames')
         step_size = int(clip_length / (seq_len + 1))
         frame_sequence = []
-        index = random.randrange(step_size)  # generate random starting index
+        # select random first frame index for continuous sequence
+        if continuous_seq:
+            start_index = random.randrange(clip_length-seq_len)
+        # choose whether to flip or not for all frames
+        if not horizontal_flip:
+            flip = False
+        elif horizontal_flip and consistent:
+            flip = random.randrange(2) == 1
+        if not random_crop:
+            x, y = None, None
+        xy_set = False
         for i in range(seq_len):
+            if continuous_seq:
+                index = start_index + i
+            else:
+                index = i*step_size + random.randrange(step_size)
             frame = all_frames[index]
-            frame = scipy.misc.imresize(frame, img_size)
-            frame = frame.astype(dtype='float16')
-            if mean is not None:
-                frame -= mean
-            if normalization:
-                frame /= 255
+            # compute flip for each frame
+            if horizontal_flip and not consistent:
+                flip = random.randrange(2) == 1
+            if random_crop and consistent and not xy_set:
+                x = random.randrange(frame.shape[0]-img_size[0])
+                y = random.randrange(frame.shape[1]-img_size[1])
+                xy_set = True
+            elif random_crop and not consistent:
+                x = random.randrange(frame.shape[0]-img_size[0])
+                y = random.randrange(frame.shape[1]-img_size[1])
+            frame = process_frame(frame, img_size, x, y, mean=mean, normalization=normalization,
+                                  flip=flip, random_crop=random_crop)
             frame_sequence.append(frame)
-            index += step_size
         frame_sequence = np.stack(frame_sequence, axis=0)
         dst_dir = os.path.splitext(dst_dir)[0]+'.npy'
         np.save(dst_dir, frame_sequence)
@@ -62,10 +100,29 @@ def process_clip(src_dir, dst_dir, seq_len, img_size, mean=None, normalization=T
     cap.release()
 
 
-def preprocessing(list_dir, UCF_dir, dest_dir, seq_len, img_size, normalization=True, mean_subtraction=True):
+def preprocessing(list_dir, UCF_dir, dest_dir, seq_len, img_size, overwrite=False, normalization=True,
+                  mean_subtraction=True, horizontal_flip=True, random_crop=True, consistent=True, continuous_seq=False):
+    '''
+    Extract video data to sequence of fixed length, and save it in npy file
+    :param list_dir:
+    :param UCF_dir:
+    :param dest_dir:
+    :param seq_len:
+    :param img_size:
+    :param overwrite: whether overwirte dest_dir
+    :param normalization: normalize to (0, 1)
+    :param mean_subtraction: subtract mean of RGB channels
+    :param horizontal_flip: add random noise to sequence data
+    :param random_crop: cropping using random location
+    :param consistent: whether horizontal flip, random crop is consistent in the sequence
+    :param continuous_seq: whether frames extracted are continuous
+    :return:
+    '''
     if os.path.exists(dest_dir):
-        print('Destination directory already exists')
-        return
+        if overwrite:
+            shutil.rmtree(dest_dir)
+        else:
+            raise IOError('Destination directory already exists')
     os.mkdir(dest_dir)
     trainlist, testlist = combine_list_txt(list_dir)
     train_dir = os.path.join(dest_dir, 'train')
@@ -75,36 +132,23 @@ def preprocessing(list_dir, UCF_dir, dest_dir, seq_len, img_size, normalization=
     if mean_subtraction:
         mean = calc_mean(UCF_dir, img_size).astype(dtype='float16')
         np.save(os.path.join(dest_dir, 'mean.npy'), mean)
+    else:
+        mean = None
 
-    print('Processing train data')
-    for clip in trainlist:
-        clip_name = os.path.basename(clip)
-        clip_category = os.path.dirname(clip)
-        category_dir = os.path.join(train_dir, clip_category)
-        src_dir = os.path.join(UCF_dir, clip)
-        print(src_dir)
-        dst_dir = os.path.join(category_dir, clip_name)
-        if not os.path.exists(category_dir):
-            os.mkdir(category_dir)
-        if mean_subtraction:
-            process_clip(src_dir, dst_dir, seq_len=seq_len, img_size=img_size, mean=mean, normalization=normalization)
-        else:
-            process_clip(src_dir, dst_dir, seq_len=seq_len, img_size=img_size, normalization=normalization)
-
-    print('Processing test data')
-    for clip in testlist:
-        clip_name = os.path.basename(clip)
-        clip_category = os.path.dirname(clip)
-        category_dir = os.path.join(test_dir, clip_category)
-        src_dir = os.path.join(UCF_dir, clip)
-        print(src_dir)
-        dst_dir = os.path.join(category_dir, clip_name)
-        if not os.path.exists(category_dir):
-            os.mkdir(category_dir)
-        if mean_subtraction:
-            process_clip(src_dir, dst_dir, seq_len=seq_len, img_size=img_size, mean=mean, normalization=normalization)
-        else:
-            process_clip(src_dir, dst_dir, seq_len=seq_len, img_size=img_size, normalization=normalization)
+    print('Preprocessing UCF data ...')
+    for clip_list, sub_dir in [(trainlist, train_dir), (testlist, test_dir)]:
+        for clip in clip_list:
+            clip_name = os.path.basename(clip)
+            clip_category = os.path.dirname(clip)
+            category_dir = os.path.join(sub_dir, clip_category)
+            src_dir = os.path.join(UCF_dir, clip)
+            dst_dir = os.path.join(category_dir, clip_name)
+            # print(dst_dir)
+            if not os.path.exists(category_dir):
+                os.mkdir(category_dir)
+            process_clip(src_dir, dst_dir, seq_len, img_size, mean=mean, normalization=normalization, horizontal_flip=horizontal_flip,
+                         random_crop=random_crop, consistent=consistent, continuous_seq=continuous_seq)
+    print('Preprocessing done ...')
 
 
 def calc_mean(UCF_dir, img_size):
@@ -140,15 +184,8 @@ if __name__ == '__main__':
     data_dir = '/home/changan/ActionRecognition/data'
     list_dir = os.path.join(data_dir, 'ucfTrainTestlist')
     UCF_dir = os.path.join(data_dir, 'UCF-101')
-    seq_frames_dir = os.path.join(data_dir, 'UCF-Preprocessed2')
-    all_frames_dir = os.path.join(data_dir, 'UCF_all_frames')
+    dest_dir = os.path.join(data_dir, 'UCF-Preprocessed-OF')
 
-    # extract all frames from videos to train the network
-    # Preprocessing(list_dir, UCF_dir, all_frames_dir, seq_len=None, img_size=image_size,
-    #               mean_subtraction=True)
-
-    # only extract 10 frames from each video to train the network
-    # Preprocessing(list_dir, UCF_dir, seq_frames_dir, sequence_length, image_size)
-
-    # extract 10 frames and save it as vidoe clips
-    preprocessing(list_dir, UCF_dir, seq_frames_dir, sequence_length, image_size, normalization=False, mean_subtraction=False)
+    # generate sequence for optical flow
+    preprocessing(list_dir, UCF_dir, dest_dir, sequence_length, image_size, overwrite=True, normalization=False,
+                  mean_subtraction=False, horizontal_flip=False, random_crop=False, consistent=True, continuous_seq=True)

@@ -1,11 +1,36 @@
-import os
+import os, time
 import keras.callbacks
 from utils.UCF_utils import image_generator, get_data_list, sequence_generator
 from models.finetuned_resnet import finetuned_resnet
 from models.temporal_CNN import temporal_CNN
+from utils.UCF_preprocessing import preprocessing
+from utils.OF_utils import optical_flow_prep
 
 N_CLASSES = 101
 BatchSize = 30
+
+
+def regenerate_data():
+    start_time = time.time()
+    sequence_length = 10
+    image_size = (216, 216, 3)
+
+    data_dir = '/home/changan/ActionRecognition/data'
+    list_dir = os.path.join(data_dir, 'ucfTrainTestlist')
+    UCF_dir = os.path.join(data_dir, 'UCF-101')
+    dest_dir = os.path.join(data_dir, 'UCF-Preprocessed-OF')
+
+    # generate sequence for optical flow
+    preprocessing(list_dir, UCF_dir, dest_dir, sequence_length, image_size, overwrite=True, normalization=False,
+                  mean_subtraction=False, horizontal_flip=False, random_crop=True, consistent=True, continuous_seq=True)
+
+    # compute optical flow data
+    src_dir = '/home/changan/ActionRecognition/data/UCF-Preprocessed-OF'
+    dest_dir = '/home/changan/ActionRecognition/data/OF_data'
+    optical_flow_prep(src_dir, dest_dir, mean_sub=True, overwrite=True)
+
+    elapsed_time = time.time() - start_time
+    print('Regenerating data takes:', int(elapsed_time/60), 'minutes')
 
 
 def fit_model(model, train_data, test_data, weights_dir, input_shape, optical_flow=False):
@@ -18,16 +43,19 @@ def fit_model(model, train_data, test_data, weights_dir, input_shape, optical_fl
             test_generator = image_generator(test_data, BatchSize, input_shape, N_CLASSES)
         print('Start fitting model')
         checkpointer = keras.callbacks.ModelCheckpoint(weights_dir, save_best_only=True, save_weights_only=True)
-        model.fit_generator(
-            train_generator,
-            steps_per_epoch=300,
-            epochs=200,
-            validation_data=test_generator,
-            validation_steps=100,
-            verbose=2,
-            callbacks=[checkpointer]
-        )
-        model.save_weights(weights_dir)
+        earlystopping = keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=4, verbose=2, mode='auto')
+        while True:
+            model.fit_generator(
+                train_generator,
+                steps_per_epoch=300,
+                epochs=50,
+                validation_data=test_generator,
+                validation_steps=100,
+                verbose=2,
+                callbacks=[checkpointer, earlystopping]
+            )
+            regenerate_data()
+
     except KeyboardInterrupt:
         print('Training time:')
 

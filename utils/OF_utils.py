@@ -3,18 +3,21 @@ import cv2
 import os
 import warnings
 from collections import OrderedDict
+import shutil
 
 
-def optical_flow_prep(src_dir, dest_dir, mean_sub=True):
+def optical_flow_prep(src_dir, dest_dir, mean_sub=True, overwrite=False):
     train_dir = os.path.join(src_dir, 'train')
     test_dir = os.path.join(src_dir, 'test')
 
     # create dest directory
     if os.path.exists(dest_dir):
-        print(dest_dir, 'already exists')
-    else:
-        os.mkdir(dest_dir)
-        print(dest_dir, 'created')
+        if overwrite:
+            shutil.rmtree(dest_dir)
+        else:
+            raise IOError(dest_dir + ' already exists')
+    os.mkdir(dest_dir)
+    print(dest_dir, 'created')
 
     # create directory for training data
     dest_train_dir = os.path.join(dest_dir, 'train')
@@ -35,6 +38,7 @@ def optical_flow_prep(src_dir, dest_dir, mean_sub=True):
     dir_mapping = OrderedDict(
         [(train_dir, dest_train_dir), (test_dir, dest_test_dir)])  # the mapping between source and dest
 
+    print('Start computing optical flows ...')
     for dir, dest_dir in dir_mapping.items():
         print('Processing data in {}'.format(dir))
         for index, class_name in enumerate(os.listdir(dir)):  # run through every class of video
@@ -42,7 +46,7 @@ def optical_flow_prep(src_dir, dest_dir, mean_sub=True):
             dest_class_dir = os.path.join(dest_dir, class_name)
             if not os.path.exists(dest_class_dir):
                 os.mkdir(dest_class_dir)
-                print(dest_class_dir, 'created')
+                # print(dest_class_dir, 'created')
             for filename in os.listdir(class_dir):  # process videos one by one
                 file_dir = os.path.join(class_dir, filename)
                 frames = np.load(file_dir)
@@ -50,8 +54,8 @@ def optical_flow_prep(src_dir, dest_dir, mean_sub=True):
                 processed_data = stack_optical_flow(frames, mean_sub).astype(np.float16)
                 dest_file_dir = os.path.join(dest_class_dir, filename)
                 np.save(dest_file_dir, processed_data)
-            print('No.{} class {} finished, data saved in {}'.format(index, class_name, dest_class_dir))
-
+            # print('No.{} class {} finished, data saved in {}'.format(index, class_name, dest_class_dir))
+    print('Finish computing optical flows')
 
 def stack_optical_flow(frames, mean_sub=False):
     if frames.dtype != np.float32:
@@ -78,17 +82,16 @@ def stack_optical_flow(frames, mean_sub=False):
         for i in range(2 * (num_sequences - 1)):
             flows[:, :, i] = flows[:, :, i] - mean_x if i % 2 == 0 else flows[:, :, i] - mean_y
 
-
     return flows
 
 
-def _calc_optical_flow(prev, next):
-    flow = cv2.calcOpticalFlowFarneback(prev, next, flow=None, pyr_scale=0.5, levels=3, winsize=15, iterations=3,
+def _calc_optical_flow(prev, next_):
+    flow = cv2.calcOpticalFlowFarneback(prev, next_, flow=None, pyr_scale=0.5, levels=3, winsize=15, iterations=3,
                                         poly_n=5, poly_sigma=1.2, flags=0)
     return flow
 
 
 if __name__ == '__main__':
-    src_dir = '/home/changan/ActionRecognition/data/UCF-Preprocessed2'
+    src_dir = '/home/changan/ActionRecognition/data/UCF-Preprocessed-OF'
     dest_dir = '/home/changan/ActionRecognition/data/OF_data'
-    optical_flow_prep(src_dir, dest_dir, mean_sub=True)
+    optical_flow_prep(src_dir, dest_dir, mean_sub=True, overwrite=True)
