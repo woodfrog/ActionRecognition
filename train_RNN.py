@@ -2,6 +2,7 @@ import os
 from utils.UCF_utils import sequence_generator, get_data_list
 import keras.callbacks
 from models import RNN
+from keras.optimizers import SGD, Adam
 
 N_CLASSES = 101
 BatchSize = 30
@@ -16,6 +17,8 @@ def fit_model(model, train_data, test_data, weights_dir, input_shape):
         test_generator = sequence_generator(test_data, BatchSize, input_shape, N_CLASSES)
         print('Start fitting model')
         checkpointer = keras.callbacks.ModelCheckpoint(weights_dir, save_best_only=True, save_weights_only=True)
+        adam = Adam()
+        model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
         model.fit_generator(
             train_generator,
             steps_per_epoch=300,

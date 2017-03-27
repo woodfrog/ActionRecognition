@@ -8,7 +8,6 @@ import os
 from keras.models import Sequential
 from keras.layers import Dense, Dropout
 from keras.layers.recurrent import LSTM
-from keras.optimizers import SGD, Adam
 
 N_CLASSES = 101
 SequenceLength = 10
@@ -22,14 +21,8 @@ def RNN(weights_dir, CNN_output):
     model.add(LSTM(256, return_sequences=False))
     model.add(Dropout(0.9))
     model.add(Dense(N_CLASSES, activation='softmax'))
-    # sgd = SGD(lr=0.001, decay=1e-5, momentum=0.5, nesterov=True, clipnorm=1.)
-    adam = Adam()
-    model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
-
-    # model structure summary
-    print(model.summary())
 
     if os.path.exists(weights_dir):
-        model.load(weights_dir)
+        model.load_weights(weights_dir)
 
     return model

@@ -52,14 +52,9 @@ def CNN(include_top=True):
         model.add(Dense(N_CLASSES, activation='softmax',
                         kernel_regularizer=regularizers.l2(0.01), bias_regularizer=regularizers.l2(0.01)))
 
-    model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
-
     weights_dir = 'CNN_weights.h5'
     if os.path.exists(weights_dir):
         model.load_weights(weights_dir)
         print('===Load weights')
-
-    # model structure summary
-    print(model.summary())
 
     return model

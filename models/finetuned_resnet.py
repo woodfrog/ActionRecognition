@@ -7,10 +7,12 @@ from models.resnet50 import ResNet50
 N_CLASSES = 101
 IMSIZE = (216, 216, 3)
 
+
 def finetuned_resnet(include_top, weights_dir):
     '''
 
-    :param include_top: True for training, False for predicting
+    :param include_top: True for training, False for generating intermediate results for
+                        LSTM cell
     :param weights_dir: path to load finetune_resnet.h5
     :return:
     '''
@@ -27,11 +29,13 @@ def finetuned_resnet(include_top, weights_dir):
         x = Dense(N_CLASSES, activation='softmax')(x)
 
     model = Model(inputs=base_model.input, outputs=x)
-    sgd = SGD(lr=0.001, decay=1e-6, momentum=0.5)
-    model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
-    print(model.summary())
 
     if os.path.exists(weights_dir):
         model.load_weights(weights_dir, by_name=True)
 
     return model
+
+
+if __name__ == '__main__':
+    model = finetuned_resnet(include_top=True, weights_dir='')
+    print(model.summary())

@@ -30,7 +30,7 @@ def regenerate_data():
     optical_flow_prep(src_dir, dest_dir, mean_sub=True, overwrite=True)
 
     elapsed_time = time.time() - start_time
-    print('Regenerating data takes:', int(elapsed_time/60), 'minutes')
+    print('Regenerating data takes:', int(elapsed_time / 60), 'minutes')
 
 
 def fit_model(model, train_data, test_data, weights_dir, input_shape, optical_flow=False):
@@ -43,7 +43,10 @@ def fit_model(model, train_data, test_data, weights_dir, input_shape, optical_fl
             test_generator = image_generator(test_data, BatchSize, input_shape, N_CLASSES)
         print('Start fitting model')
         checkpointer = keras.callbacks.ModelCheckpoint(weights_dir, save_best_only=True, save_weights_only=True)
-        earlystopping = keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=4, verbose=2, mode='auto')
+        earlystopping = keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=4, verbose=2,
+                                                      mode='auto')
+        sgd = SGD(lr=0.001, decay=1e-6, momentum=0.5)
+        model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
         while True:
             model.fit_generator(
                 train_generator,
