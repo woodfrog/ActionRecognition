@@ -1,11 +1,14 @@
-# Action recognition (detection) based on RNN
+# Action Recognition
 
 ### Overall Objective:
 
-- Training, validating, testing RNN models (with LSTM cells) using data from open-source video datasets.
+- Training, validating, testing different models using data from UCF-101 datasets
 
-- Make the model give reasonable descriptions with word or sentence when it's
-  fed with new videos.
+- Compare the performance of different models and try to analyze the underlying
+  reasons
+
+- Maybe combine the model with best performance into a small application which
+  give the prediction when fed with videos.
 
 
 ### File Structure
@@ -23,8 +26,24 @@
 ./utils:
     Possible utils scripts
 
-### Pipeline
-#### Preprocessing
+
+### Models
+
+1. LRCN (CNN + LSTMl), with the input of frames uniformly extracted from each
+   video
+
+2. Fine-tuned ResNet50 trained solely with image data (every frame of every
+   video is considered as an image for training or testing)
+
+3. Simple CNN model trained with stacked optical flow data (generate one stacked
+   optical flow from each of the video)
+
+4. Two-stream model, combine the models in *2 and 3* with an extra layer that
+   output the final result
+
+## Pipeline
+### Preprocessing
+
 1. Download dataset: UCF101 http://crcv.ucf.edu/data/UCF101.php  
 2. Extract video to 5 FPS and down sample resolution for each video 
 and discard videos with too few frames
@@ -34,7 +53,7 @@ video clip
 4. Load videos in batch and do mean substraction for each video
 5. Feed preprocessed videos into CNN and train on RNN with LSTM network
 
-#### Experiments
+### Experiments
 1. Try ConvLSTM. Train from sratch, too slow and seems no effect with acc around 0.01, the probability of random guess.
 2. Seperate Inception and LSTM, and only train LSTM. Loss stops dropping after 100 epochs.
 3. Train Inception using video frame data. And then only train LSTM using output of Inception.
@@ -60,8 +79,8 @@ flow
 
 
 
-Methods to try: 
-1. Data augumentation, random sampling, generate different preprocessed data
-2. Using continuous frames as input 
+### Methods to try: 
+1. Data augumentation,(random sampling, fliiping and jittering), generate different preprocessed data
+   **(done)**
+2. Using continuous frames as input *(done)* 
 3. Multi-task learning: combine different databases using two different softmax and shared weights
-4. fliiping and jittering, loss decreasing stops soon?
