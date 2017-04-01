@@ -2,17 +2,20 @@ import numpy as np
 import scipy.misc
 import os, cv2, random
 import shutil
+import scipy.misc
+import time
+from .OF_utils import optical_flow_prep
 
 
 def combine_list_txt(list_dir):
-    testlisttxt = 'testlist01.txt'
-    trainlisttxt = 'trainlist01.txt'
+    testlisttxt = 'testlist.txt'
+    trainlisttxt = 'trainlist.txt'
 
     testlist = []
     txt_path = os.path.join(list_dir, testlisttxt)
     with open(txt_path) as fo:
         for line in fo:
-            testlist.append(line.rstrip())
+            testlist.append(line[:line.rfind(' ')])
 
     trainlist = []
     txt_path = os.path.join(list_dir, trainlisttxt)
@@ -174,6 +177,54 @@ def calc_mean(UCF_dir, img_size):
     return mean
 
 
+def preprocess_listtxt(list_dir, index_dir, txt_dir, dest_dir):
+    class_dict = dict()
+    with open(index_dir) as fo:
+        for line in fo:
+            class_index, class_name = line.split()
+            class_dict[class_name] = class_index
+
+    with open(txt_dir, 'r') as fo:
+        lines = [line for line in fo]
+
+    with open(dest_dir, 'w') as fo:
+        for line in lines:
+            class_name = os.path.dirname(line)
+            class_index = class_dict[class_name]
+            fo.write(line.rstrip('\n') + ' {}\n'.format(class_index))
+
+
+def preprocess_flow_image(flow_dir):
+    videos = os.listdir(flow_dir)
+    for video in videos:
+        video_dir = os.path.join(flow_dir, video)
+        flow_images = os.listdir(video_dir)
+        for flow_image in flow_images:
+            flow_image_dir = os.path.join(video_dir, flow_image)
+            img = scipy.misc.imread(flow_image_dir)
+            if np.max(img) < 140 and np.min(img) > 120:
+                print('remove', flow_image_dir)
+                os.remove(flow_image_dir)
+
+
+def regenerate_data(data_dir, list_dir, UCF_dir):
+    start_time = time.time()
+    sequence_length = 10
+    image_size = (216, 216, 3)
+
+    dest_dir = os.path.join(data_dir, 'UCF-Preprocessed-OF')
+    # generate sequence for optical flow
+    preprocessing(list_dir, UCF_dir, dest_dir, sequence_length, image_size, overwrite=True, normalization=False,
+                  mean_subtraction=False, horizontal_flip=False, random_crop=True, consistent=True, continuous_seq=True)
+
+    # compute optical flow data
+    src_dir = '/home/changan/ActionRecognition/data/UCF-Preprocessed-OF'
+    dest_dir = '/home/changan/ActionRecognition/data/OF_data'
+    optical_flow_prep(src_dir, dest_dir, mean_sub=True, overwrite=True)
+
+    elapsed_time = time.time() - start_time
+    print('Regenerating data takes:', int(elapsed_time / 60), 'minutes')
+
 if __name__ == '__main__':
     '''
         extract frames from videos as npy files
@@ -184,8 +235,26 @@ if __name__ == '__main__':
     data_dir = '/home/changan/ActionRecognition/data'
     list_dir = os.path.join(data_dir, 'ucfTrainTestlist')
     UCF_dir = os.path.join(data_dir, 'UCF-101')
-    dest_dir = os.path.join(data_dir, 'UCF-Preprocessed-OF')
+    frames_dir = os.path.join(data_dir, 'frames/mean.npy')
+
+    # add index number to testlist file
+    # index_dir = os.path.join(list_dir, 'classInd.txt')
+    # txt_dir = os.path.join(list_dir, 'testlist01.txt')
+    # dest_dir = os.path.join(list_dir, 'testlist.txt')
+    # preprocess_listtxt(list_dir, index_dir, txt_dir, dest_dir)
 
     # generate sequence for optical flow
-    preprocessing(list_dir, UCF_dir, dest_dir, sequence_length, image_size, overwrite=True, normalization=False,
-                  mean_subtraction=False, horizontal_flip=False, random_crop=False, consistent=True, continuous_seq=True)
+    # dest_dir = os.path.join(data_dir, 'UCF-Preprocessed-OF')
+    # preprocessing(list_dir, UCF_dir, dest_dir, sequence_length, image_size, overwrite=True, normalization=False,
+    #               mean_subtraction=False, horizontal_flip=False, random_crop=False, consistent=True, continuous_seq=True)
+
+    # calculate RGB mean for LRCN data
+    # RGB_mean = calc_mean(UCF_dir, image_size)
+    # np.save(frames_dir, RGB_mean)
+
+    # remove useless optical flow data
+    # flow_dir = os.path.join(data_dir, 'flow_images')
+    # preprocess_flow_image(flow_dir)
+
+    # generate sequence and optical flow data
+    regenerate_data(data_dir, list_dir, UCF_dir)

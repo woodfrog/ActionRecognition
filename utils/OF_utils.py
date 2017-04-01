@@ -57,6 +57,7 @@ def optical_flow_prep(src_dir, dest_dir, mean_sub=True, overwrite=False):
             # print('No.{} class {} finished, data saved in {}'.format(index, class_name, dest_class_dir))
     print('Finish computing optical flows')
 
+
 def stack_optical_flow(frames, mean_sub=False):
     if frames.dtype != np.float32:
         frames = frames.astype(np.float32)

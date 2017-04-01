@@ -74,9 +74,12 @@ This indicates that RNN is not so useful in action recognition, since it only ke
 information in its state but does not explicit operations on coming sequence. In other words, action recognition
 is not a task that depends on long term dependence so much, but instead, it needs more explicit information like optical
 flow
-9. Try ConvNet using optical flow as input, and get val acc of 0.21. Using continuous sequential data and higher drop rate
-(0.5 to 0.9)
-
+9. Try ConvNet using optical flow as input, and get val acc of 0.21. Using continuous sequential data, higher drop rate
+(0.5 to 0.9) and recalculating optical flow data when val loss stops dropping gives a higher val acc 0.42
+10. Fine tune ResNet50 on all video frames and get val acc of 0.65
+11. Fine tune ResNet50 on 3 channel optical flow and get val acc of 0.55
+12. Run two stream using spatial and temporal finetuned ResNet and get val acc of 0.59
+13. Run two stream using spatial ResNet and temporal CNN  and get val acc of 
 
 
 ### Methods to try: 

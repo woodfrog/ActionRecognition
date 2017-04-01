@@ -1,7 +1,6 @@
 import os
 from keras.models import Model
 from keras.layers import Dense, Flatten, Dropout
-from keras.optimizers import SGD
 from models.resnet50 import ResNet50
 
 N_CLASSES = 101
@@ -22,6 +21,8 @@ def finetuned_resnet(include_top, weights_dir):
 
     x = base_model.output
     x = Flatten()(x)
+    x = Dense(2048, activation='relu')(x)
+    x = Dropout(0.5)(x)
     x = Dense(1024, activation='relu')(x)
     x = Dropout(0.5)(x)
 
@@ -29,7 +30,6 @@ def finetuned_resnet(include_top, weights_dir):
         x = Dense(N_CLASSES, activation='softmax')(x)
 
     model = Model(inputs=base_model.input, outputs=x)
-
     if os.path.exists(weights_dir):
         model.load_weights(weights_dir, by_name=True)
 

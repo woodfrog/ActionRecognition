@@ -2,3 +2,5 @@
 .idea
 data/
 *.h5
+/logs
+

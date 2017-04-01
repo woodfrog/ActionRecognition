@@ -18,8 +18,6 @@ def RNN(weights_dir, CNN_output):
 
     model.add(LSTM(256, return_sequences=True, input_shape=(SequenceLength, CNN_output)))
     model.add(Dropout(0.9))
-    model.add(LSTM(256, return_sequences=False))
-    model.add(Dropout(0.9))
     model.add(Dense(N_CLASSES, activation='softmax'))
 
     if os.path.exists(weights_dir):

@@ -46,10 +46,10 @@ def temporal_CNN(input_shape, classes, weights_dir, include_top=True):
 
     x = Flatten()(x)
     x = Dense(4096, activation='relu', name='tmp_fc6')(x)
-    x = Dropout(0.5)(x)
+    x = Dropout(0.9)(x)
 
     x = Dense(2048, activation='relu', name='tmp_fc7')(x)
-    x = Dropout(0.5)(x)
+    x = Dropout(0.9)(x)
 
     if include_top:
         x = Dense(classes, activation='softmax', name='tmp_fc101')(x)
