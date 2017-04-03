@@ -11,7 +11,7 @@ def predict_two_stream3_test():
     spatial_weights_dir = '/home/changan/ActionRecognition/models/finetuned_resnet_RGB_65.h5'
     temporal_weights_dir = '/home/changan/ActionRecognition/models/finetuned_resnet_flow.h5'
     model = two_stream_model(spatial_weights_dir=spatial_weights_dir, temporal_weights_dir=temporal_weights_dir)
-    model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'])
+
     print(model.summary())
 
     print('Start to predict two stream model')
@@ -30,14 +30,14 @@ def predict_two_stream3_test():
         prediction = model.predict(x)
         if y[0][np.argmax(prediction)] == 1:
             correct_num += 1
-    print('test accuracy on', steps, 'examples is', float(correct_num)/steps)
+    print('test accuracy on', steps, 'examples is', float(correct_num) / steps)
 
 
 def predict_two_stream18_test():
     spatial_weights_dir = '/home/changan/ActionRecognition/models/finetuned_resnet_RGB_65.h5'
     temporal_weights_dir = '/home/changan/ActionRecognition/models/temporal_cnn_42.h5'
     model = two_stream_model(spatial_weights_dir=spatial_weights_dir, temporal_weights_dir=temporal_weights_dir)
-    model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'])
+
     print(model.summary())
 
     print('Start to predict two stream model')
@@ -58,7 +58,12 @@ def predict_two_stream18_test():
         prediction = model.predict(x)
         if y[0][np.argmax(prediction)] == 1:
             correct_num += 1
-    print('test accuracy on', steps, 'examples is', float(correct_num)/steps)
+    print('test accuracy on', steps, 'examples is', float(correct_num) / steps)
+
+
+def predict_single_video(video_path):
+    pass
+    # todo: predict based on an input video. Produce both optical flow and single frame input from the video
 
 
 if __name__ == '__main__':
@@ -66,7 +71,6 @@ if __name__ == '__main__':
     list_dir = os.path.join(data_dir, 'ucfTrainTestlist')
     video_dir = os.path.join(data_dir, 'OF_data')
     weights_dir = '/home/changan/ActionRecognition/models'
-
 
     # fine tune resnet50
     # train_data = os.path.join(list_dir, 'trainlist.txt')

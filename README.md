@@ -2,88 +2,65 @@
 
 ### Overall Objective:
 
-- Training, validating, testing different models using data from UCF-101 datasets
+- Try different models for action recognition using data from [UCF-101](http://crcv.ucf.edu/data/UCF101.php) 
+    
 
-- Compare the performance of different models and try to analyze the underlying
-  reasons
+- Compare the performance of different models and do some analysis based on the experiment results
 
-- Maybe combine the model with best performance into a small application which
-  give the prediction when fed with videos.
 
 
 ### File Structure
 
 ./rnn\_practice: 
-    For doing some practice on RNN models and LSTMs with online tutorails and
-    other great resources.
+    For doing some practice on RNN models and LSTMs with online tutorials and
+    other useful resources
 
 ./data:
-    Training and testing data. (**But don't add huge data files to this repo**)
+    Training and testing data. (**But don't add huge data files to this repo, add them to gitignore**)
 
-./model:
-    Defining the model and other training/testing details
+./models:
+    Defining the architecture of models
 
 ./utils:
-    Possible utils scripts
+    Utils scripts for dataset preparation, input pre-processing and other misc  
+    
+./train_CNN:
+    For training our different CNN models. Load corresponding model, set the training parameters and then start training 
 
+./process_CNN:
+    For the LRCN model, the CNN component is pre-trained and then fixed during the training of LSTM cells. Thus we can use the 
+    CNN model to pre-process the frames of each video and store the intermediate result for feeding into LSTMs later. This 
+    can largely improve the training efficiency of the LRCN model
+
+./train_RNN:
+    For training the LRCN model
+   
+./predict:
+    For calculating the overall testing accuracy on the whole testing set
+    
+ 
 
 ### Models
 
-1. LRCN (CNN + LSTMl), with the input of frames uniformly extracted from each
-   video
+1. Fine-tuned ResNet50 trained solely with single-frame image data (every frame of every
+   video is considered as an image for training or testing, thus a natural data augmentation).
+   The ResNet50 is from [keras repo](https://github.com/fchollet/deep-learning-models), with weights 
+   pre-trained on Imagenet. **./models/finetuned_resnet.py** 
+   
+   
 
-2. Fine-tuned ResNet50 trained solely with image data (every frame of every
-   video is considered as an image for training or testing)
-
+2. LRCN (CNN(here we use the fine-tuned ResNet50) + LSTMs), with input being a sequence of frames uniformly extracted from each
+   video. The fine-tuned ResNet directly uses the result of 1 without extra training.
+   (Refer to [Long-term recurrent
+   convolutional network](http://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Donahue_Long-Term_Recurrent_Convolutional_2015_CVPR_paper.pdf))
+   **Produce intermediate data using ./process_CNN.py and then train and predict with ./models/RNN.py** 
+   
+   
 3. Simple CNN model trained with stacked optical flow data (generate one stacked
-   optical flow from each of the video)
+   optical flow from each of the video). **./models/temporal_CNN.py**
 
-4. Two-stream model, combine the models in *2 and 3* with an extra layer that
-   output the final result
-
-## Pipeline
-### Preprocessing
-
-1. Download dataset: UCF101 http://crcv.ucf.edu/data/UCF101.php  
-2. Extract video to 5 FPS and down sample resolution for each video 
-and discard videos with too few frames
-3. Segment number of frames into equal size blocks(frame number/sequence 
-length L). Randomly select one frame from each block to compose L length 
-video clip
-4. Load videos in batch and do mean substraction for each video
-5. Feed preprocessed videos into CNN and train on RNN with LSTM network
-
-### Experiments
-1. Try ConvLSTM. Train from sratch, too slow and seems no effect with acc around 0.01, the probability of random guess.
-2. Seperate Inception and LSTM, and only train LSTM. Loss stops dropping after 100 epochs.
-3. Train Inception using video frame data. And then only train LSTM using output of Inception.
-Finding loss not decreasing, try data normalization(/255). Still fail, so we guess
-this may because CNN con only recognize the rough outline of an object, but can not
-tell the small difference of what that obejct is doing.
-4. Use small CNN and RNN and train them seperately. To prevent overfitting, add 
-regularizer in FC layer, dropout layer with 0.5 dropping rate, setting checkpoint
-to save the weights when validation accuracy reaches highest. Tranining small CNN hundreds of
-epochs make trainning acc 98, testing acc 28. Still heavy overfitting. Training RNN, 
-training acc stops at 0.33, validation acc stops at 0.17
-5. Build a more complex CNN model according (two stream ...), try to extracts all frames to get more data,
- but fail to fit the data in disk memory.
-7. Simply using a combination of Resnet as feature extractor and one layer lstm gives val acc of 0.67
-8. Regenerate data with mean subtraction and normalization.Fine tune ResNet with one more FC layer and get val acc of 0.59. 
-Using a combination of finetuned ResNet and lstm shows no improvement. 
-This indicates that RNN is not so useful in action recognition, since it only keeps incoming 
-information in its state but does not explicit operations on coming sequence. In other words, action recognition
-is not a task that depends on long term dependence so much, but instead, it needs more explicit information like optical
-flow
-9. Try ConvNet using optical flow as input, and get val acc of 0.21. Using continuous sequential data, higher drop rate
-(0.5 to 0.9) and recalculating optical flow data when val loss stops dropping gives a higher val acc 0.42
-10. Fine tune ResNet50 on all video frames and get val acc of 0.65
-11. Fine tune ResNet50 on 3 channel optical flow and get val acc of 0.55
-12. Run two stream using spatial and temporal finetuned ResNet and get val acc of 0.59
-13. Run two stream using spatial ResNet and temporal CNN  and get val acc of 
+4. Two-stream model, combine the models in 2 and 3 with an extra fusion layer that
+   output the final result. 3 and 4 refer to [this paper](http://papers.nips.cc/paper/5353-two-stream-convolutional-networks-for-action-recognition-in-videos.pdf)
+   **./models/two_stream.py**
 
 
-### Methods to try: 
-1. Data augumentation,(random sampling, fliiping and jittering), generate different preprocessed data
-   **(done)**
-2. Using continuous frames as input *(done)* 
-3. Multi-task learning: combine different databases using two different softmax and shared weights

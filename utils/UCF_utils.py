@@ -104,8 +104,8 @@ def image_generator(listtxt_dir, frames_dir, batch_size, img_size, num_classes, 
             frame_dir = os.path.join(clip_dir, frame)
             frame = scipy.misc.imread(frame_dir)
             if random_crop:
-                x = random.randrange(frame.shape[0]-img_size[0])
-                y = random.randrange(frame.shape[1]-img_size[1])
+                x = random.randrange(frame.shape[0] - img_size[0])
+                y = random.randrange(frame.shape[1] - img_size[1])
                 frame = frame[x:x + img_size[0], y:y + img_size[1], :]
             else:
                 frame = scipy.misc.imresize(frame, img_size)
@@ -118,7 +118,7 @@ def image_generator(listtxt_dir, frames_dir, batch_size, img_size, num_classes, 
                 frame /= 255
 
             batch_x[i] = frame
-            batch_y[i, int(clip_index)-1] = 1
+            batch_y[i, int(clip_index) - 1] = 1
 
         yield batch_x, batch_y
 
@@ -187,6 +187,7 @@ def two_stream18_generator(list_dir, spatial_dir, temporal_dir, batch_size, spat
     '''
     with open(list_dir) as fo:
         test_list = [line for line in fo]
+
     spatial_x_shape = (batch_size,) + spatial_shape
     temporal_x_shape = (batch_size,) + temporal_shape
     y_shape = (batch_size, num_classes)
@@ -198,7 +199,7 @@ def two_stream18_generator(list_dir, spatial_dir, temporal_dir, batch_size, spat
         two_stream_y = np.zeros(y_shape)
         for i in range(batch_size):
             clip_name, clip_index = random.choice(test_list).split()
-            clip_name = clip_name[:clip_name.find('.')]+'.npy'
+            clip_name = clip_name[:clip_name.find('.')] + '.npy'
             clip_spatial_dir = os.path.join(spatial_dir, clip_name)
             clip_temporal_dir = os.path.join(temporal_dir, clip_name)
             # read spatial data
@@ -207,7 +208,7 @@ def two_stream18_generator(list_dir, spatial_dir, temporal_dir, batch_size, spat
             # read temporal data
             temporal_x[i] = np.load(clip_temporal_dir)
 
-            two_stream_y[i][int(clip_index)-1] = 1
+            two_stream_y[i][int(clip_index) - 1] = 1
         yield two_stream_x, two_stream_y
 
 
@@ -259,6 +260,7 @@ def get_data_list(list_dir, video_dir):
         test_data.append((dst_dir, class_index[clip_class]))
 
     return train_data, test_data, class_index
+
 
 if __name__ == '__main__':
     image_size = (216, 216, 3)
