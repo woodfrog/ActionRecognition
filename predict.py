@@ -2,9 +2,15 @@ import os
 import numpy as np
 from utils.UCF_utils import two_stream3_generator, two_stream18_generator
 from models.two_stream import two_stream_model
+from utils.OF_utils import stack_optical_flow
+import cv2
+import random
+from scipy.misc import imresize
+from keras.applications.imagenet_utils import preprocess_input
 
 N_CLASSES = 101
 BatchSize = 32
+IMSIZE = (216, 216, 3)
 
 
 def predict_two_stream3_test():
@@ -62,8 +68,64 @@ def predict_two_stream18_test():
 
 
 def predict_single_video(video_path):
-    pass
-    # todo: predict based on an input video. Produce both optical flow and single frame input from the video
+    spatial_weights = '/Users/cjc/cv/ActionRecognition/data/finetuned_resnet_RGB_65.h5'
+    temporal_weights = '/Users/cjc/cv/ActionRecognition/data/temporal_cnn_42.h5'
+    model = two_stream_model(spatial_weights, temporal_weights)
+    cap = cv2.VideoCapture(video_path)
+    video = list()
+    while cap.isOpened():
+        succ, frame = cap.read()
+        if not succ:
+            break
+        # append frame that is not all zeros
+        if frame.any():
+            frame = imresize(frame, IMSIZE)
+            video.append(frame)
+
+    frames = _pick_frames(video, num_frame=10)
+
+    of_input = stack_optical_flow(frames, mean_sub=True)
+    of_input = np.expand_dims(of_input, axis=0)
+
+    single_frame = frames[random.randint(0, len(frames) - 1)]
+    single_frame = np.expand_dims(single_frame, axis=0)
+    single_frame = preprocess_single_frame(single_frame)
+
+    two_stream_input = [single_frame, of_input]
+    preds = model.predict(two_stream_input)
+    top_3_types = decode_prediction(preds, top=3)
+    print('top-3: ', top_3_types)
+
+
+def _pick_frames(video_sequence, num_frame):
+    i = 0
+    if num_frame > len(video_sequence):
+        raise ValueError('Input video is too short and cannot provide enough frames for optical flow...')
+    frames_shape = (num_frame,) + video_sequence[0].shape
+    start = random.randint(0, len(video_sequence) - num_frame)
+    result = np.zeros(frames_shape)
+
+    for i in range(num_frame):
+        result[i] = video_sequence[i + start]
+
+    return result
+
+
+def decode_prediction(preds, top=3):
+    index_dir = '/Users/cjc/cv/ActionRecognition/data/ucfTrainTestlist/classInd.txt'
+    class_dict = dict()
+    with open(index_dir) as fo:
+        for line in fo:
+            class_index, class_name = line.split()
+            class_dict[int(class_index)-1] = class_name
+    top = np.argsort(preds)[0][-top:][::-1]
+    return [class_dict[x] for x in top]
+
+
+def preprocess_single_frame(frame):
+    frame = preprocess_input(frame)
+    frame /= 255
+    return frame
 
 
 if __name__ == '__main__':
@@ -72,21 +134,8 @@ if __name__ == '__main__':
     video_dir = os.path.join(data_dir, 'OF_data')
     weights_dir = '/home/changan/ActionRecognition/models'
 
-    # fine tune resnet50
-    # train_data = os.path.join(list_dir, 'trainlist.txt')
-    # test_data = os.path.join(list_dir, 'testlist.txt')
-    # input_shape = (216, 216, 3)
-    # weights_dir = os.path.join(weights_dir, 'finetuned_resnet_flow.h5')
-    # model = finetuned_resnet(include_top=True, weights_dir=weights_dir)
-    # fit_model(model, train_data, test_data, weights_dir, input_shape)
+    # predict overall testing set using two-stream model
+    # predict_two_stream18_test()
 
-    # train_data, test_data, class_index = get_data_list(list_dir, video_dir)
-    #
-    # training CNN using optical flow as input
-    # weights_dir = os.path.join(weights_dir, 'temporal_cnn.h5')
-    # input_shape = (216, 216, 18)
-    # model = temporal_CNN(input_shape, N_CLASSES, weights_dir, include_top=True)
-    # fit_model(model, train_data, test_data, weights_dir, input_shape, optical_flow=True)
-
-    # predict test dataset using two stream
-    predict_two_stream18_test()
+    # predict single video
+    predict_single_video(video_path='/Users/cjc/cv/ActionRecognition/data/v_BabyCrawling_g01_c01.mp4')
