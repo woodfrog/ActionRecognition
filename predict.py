@@ -108,7 +108,7 @@ def _pick_frames(video_sequence, num_frame):
 
 
 def decode_prediction(preds, top=3):
-    index_dir = '/home/changan/ActionRecognition/data/ucfTrainTestlist/classInd.txt'
+    index_dir = '/Users/cjc/cv/ActionRecognition/data/ucfTrainTestlist/classInd.txt'
     class_dict = dict()
     with open(index_dir) as fo:
         for line in fo:

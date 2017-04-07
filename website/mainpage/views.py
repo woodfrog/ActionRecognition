@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .predict import predict_single_video
 from .models.two_stream import two_stream_model
 
-root_dir = '/home/changan'
+root_dir = '/Users/cjc/cv'
 ts_model = None
 
 
