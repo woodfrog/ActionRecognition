@@ -1,0 +1,78 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        {% load staticfiles %}
+        <link rel="stylesheet" type="text/css" href="{% static 'css/bootstrap.min.css' %}">
+    </head>
+    <body>
+        <div class="container" align="center">
+            <div class="jumbotron">
+                <h2>CMPT 414: Action Recognition</h2>
+                <p>Group member:Changan Chen, Jiacheng Chen</p>
+            </div>
+        </div>
+        {% if err_msg %}
+        <div class="alert alert-warning" align="center">
+            <strong>Warning!</strong> {{err_msg}}
+        </div>
+        {% endif %}
+        <div class="container" align="center">
+        <h3 class="text-center">Upload an video</h3>
+        <div class="row">
+            <div align="center" >
+            <form method="post" enctype="multipart/form-data">{% csrf_token %}
+                <div class="form-group">
+                    <!--<label for="uploading">Upload an video</label>-->
+                    <input type="file" name="file" id="uploading"/>
+                    <p class="help-block">Choose videos from your local library</p>
+                </div>
+                <input type="submit" name="submit" value="Upload" />
+            </form>
+            </div>
+            <!--<div class="col-xs-6" align="center">-->
+            <!--<form method="get" style="width:400px">-->
+                <!--<div class="form-group">-->
+                    <!--<label for="link">Enter a downloadable video link on the internet</label>-->
+                    <!--<input type="text" name="video_link" class="form-control" palceholder="url" value='https://staticdelivery.nexusmods.com/mods/110/images/74627-0-1459502036.jpg'>-->
+                    <!--<p class="help-block">Space should not be contained in the file name</p>-->
+                <!--</div>-->
+                <!--<button type="submit">Submit</button><br>-->
+            <!--</form>-->
+            <!--</div>-->
+        </div>
+        </div>
+        <div class="container" align="center">
+        {% if video %}
+            <video width="320" height="240" controls>
+                <source src="/static/{{video}}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <form action="/mainpage">
+                <input type="hidden" name="video" value="{{video}}"><br>
+                <div class="form-group">
+                    <label for="top_numberId">Enter the top classes number you want to display</label>
+                    <input type="text" name="top_number" class="form-control" placeholder="number" value="{{top_number}}" style="width:200px">
+                </div>
+                <input type="submit" name="predict" value="Predict"><br>
+            </form>
+            {% if predicted_class %}
+            <table class="table table-bordered" style="width:500px" align="center">
+                <thead>
+                    <tr>
+                        <th>Class Type</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for val, key in predicted_class %}
+                <tr>
+                    <td> {{val}}</td>
+                    <td> {{key}}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            {% endif %}
+        {% endif %}
+        </div>
+    </body>
+</html>
