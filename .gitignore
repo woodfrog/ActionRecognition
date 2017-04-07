@@ -4,3 +4,4 @@ data/
 *.h5
 /logs
 .DS_Store
+__pycache__

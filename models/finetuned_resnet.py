@@ -1,7 +1,7 @@
 import os
 from keras.models import Model
 from keras.layers import Dense, Flatten, Dropout
-from .resnet50 import ResNet50
+from resnet50 import ResNet50
 
 N_CLASSES = 101
 IMSIZE = (216, 216, 3)

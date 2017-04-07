@@ -1,8 +1,8 @@
 import os
 import numpy as np
-from .utils.UCF_utils import two_stream3_generator, two_stream18_generator
-from .models.two_stream import two_stream_model
-from .utils.OF_utils import stack_optical_flow
+from utils.UCF_utils import two_stream3_generator, two_stream18_generator
+from models.two_stream import two_stream_model
+from utils.OF_utils import stack_optical_flow
 import cv2
 import random
 from scipy.misc import imresize
