@@ -1,18 +1,19 @@
 # Action Recognition
 
-### Project Overview
+## Project Overview
 
 - This project explores prominent action recognition models with [UCF-101](http://crcv.ucf.edu/data/UCF101.php) dataset
     
 - Perfomance of different models are compared and analysis of experiment results are provided
 
-### File Structure of the Repo
+
+## File Structure of the Repo
 
 rnn\_practice: 
     Practices on RNN models and LSTMs with online tutorials and other useful resources
 
 data:
-    Training and testing data. (**NOTE: please don't add large data files to this repo, add them to git.ignore**)
+    Training and testing data. (**NOTE: please don't add large data files to this repo, add them to .gitignore**)
 
 models:
     Defining the architecture of models
@@ -36,7 +37,7 @@ predict:
     
  
 
-### Models Description
+## Models Description
 
 - Fine-tuned ResNet50 and trained solely with single-frame image data. Each frame of the video is considered as an image for training and testing, which generates a natural data augmentation.
    The ResNet50 is from [keras repo](https://github.com/fchollet/deep-learning-models), with weights 
@@ -61,3 +62,31 @@ predict:
    **./models/two_stream.py**
 
 ![](https://github.com/woodfrog/ActionRecognition/blob/master/readme_imgs/two_stream_model.png?raw=true)
+
+## Citations
+If you use this code or ideas from the paper for your research, please cite the following papers:
+```
+@inproceedings{lrcn2014,
+   Author = {Jeff Donahue and Lisa Anne Hendricks and Sergio Guadarrama
+             and Marcus Rohrbach and Subhashini Venugopalan and Kate Saenko
+             and Trevor Darrell},
+   Title = {Long-term Recurrent Convolutional Networks
+            for Visual Recognition and Description},
+   Year  = {2015},
+   Booktitle = {CVPR}
+}
+@article{DBLP:journals/corr/SimonyanZ14,
+  author    = {Karen Simonyan and
+               Andrew Zisserman},
+  title     = {Two-Stream Convolutional Networks for Action Recognition in Videos},
+  journal   = {CoRR},
+  volume    = {abs/1406.2199},
+  year      = {2014},
+  url       = {http://arxiv.org/abs/1406.2199},
+  archivePrefix = {arXiv},
+  eprint    = {1406.2199},
+  timestamp = {Mon, 13 Aug 2018 16:47:39 +0200},
+  biburl    = {https://dblp.org/rec/bib/journals/corr/SimonyanZ14},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+```
