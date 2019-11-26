@@ -1,5 +1,7 @@
 # Action Recognition
 
+This project aims to accurately recognize user's action in a series of video frames through combination of [convolution neural nets](https://en.wikipedia.org/wiki/Convolutional_neural_network), and [long-short term memory neural nets](https://en.wikipedia.org/wiki/Long_short-term_memory).
+
 ## Project Overview
 
 - This project explores prominent action recognition models with [UCF-101](http://crcv.ucf.edu/data/UCF101.php) dataset
